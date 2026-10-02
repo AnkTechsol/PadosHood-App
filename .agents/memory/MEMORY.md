@@ -1,0 +1,1 @@
+- [Society rollout intent](society-rollout.md) — owner wants project documentation and application prepared for their own society, with Replit publishing.
