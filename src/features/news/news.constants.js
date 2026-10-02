@@ -1,0 +1,6 @@
+export const newsData = [
+  { id: 1, title: 'PCMC 8-Hour Water Cut Moshi & Indrayani Nagar', category: 'Water Cut', date: '2026-06-30', source: 'PCMC Water Dept', important: true, content: 'Due to urgent maintenance work at the water treatment plant, there will be an 8-hour water cut in Moshi and Indrayani Nagar.' },
+  { id: 2, title: 'Traffic Diversion Dehu-Alandi Road Flyover Construction', category: 'Traffic', date: '2026-06-29', source: 'Traffic Police Moshi', important: false, content: 'Traffic diversion on Dehu-Alandi road near the new flyover construction site. Heavy vehicles are advised to take alternate routes.' },
+  { id: 3, title: 'Planned Power Cut Moshi Sector 3 4 5 Saturday', category: 'Power Cut', date: '2026-06-28', source: 'MSEDCL Indrayani Division', important: false, content: 'MSEDCL has scheduled a power cut in Sectors 3, 4, and 5 of Moshi this Saturday from 10 AM to 5 PM for pre-monsoon maintenance.' },
+  { id: 4, title: 'Aaple Moshi Mega Health Camp Indrayani Sports Ground', category: 'Civic', date: '2026-06-27', source: 'MLA Office Moshi', important: true, content: 'A mega health camp will be organized at Indrayani Sports Ground. Free checkups for all citizens.' }
+];
