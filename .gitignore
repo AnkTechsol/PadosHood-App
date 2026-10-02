@@ -25,3 +25,8 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Credentials belong in Replit Secrets, not the repository.
+.env
+.env.*
+!.env.example

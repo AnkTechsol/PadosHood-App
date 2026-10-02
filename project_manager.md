@@ -1,43 +1,17 @@
-# Project Manager
+# Project status
 
-## Project Overview
-Pivot an existing community app into a premium residential society management platform. 
+## Product
 
-## Product Goal
-Provide a premium, responsive web app featuring a digital notice board, community forums, and a transparent 4-stage complaint lifecycle mimicking a native mobile app experience.
+The selected product is Angaan for Woodsville Phase 2. Scope, permissions, non-goals, and release gates are authoritative in [docs/product/SOCIETY_LAUNCH.md](docs/product/SOCIETY_LAUNCH.md), with API details in [docs/engineering/API.md](docs/engineering/API.md).
 
-## Current State
-Initial documentation setup in progress. Awaiting implementation of global state and UI components.
+## Implementation status (documentation audit)
 
-## Current Milestone
-Implement Society Communication and Complaint Management modules.
+The active society UI is wired through `src/main.jsx` → `src/entry/AppRouter.jsx` → `src/App.jsx`; Clerk, Express/Vite dev, Express production serving, and canonical Clerk proxy are integrated. The latest parent-reported automated checks are recorded in [release evidence](docs/engineering/RELEASE_EVIDENCE.md). Do not describe this as resident-release-ready: real signed-in/mobile journeys, production publishing, and backup restore remain unverified, and society/legal/operator approvals are outstanding.
 
-## Active Objectives
-- Set up `SocietyContext.jsx` for state management.
-- Build Communication pages (Notices & Forum).
-- Build Complaint Management pages (Resident form, Tracking view, and Admin dashboard).
+## Current release blockers
 
-## Completed Work
-- Shift Boss initialization: Set up project management documentation.
-
-## Known Issues
-- None yet.
-
-## Open Decisions
-- Theme/Styling consistency to follow premium aesthetic guidelines (subtle glassmorphism, dynamic hover effects).
-
-## Important Decisions
-- Vanilla CSS will be used as configured in `src/index.css`.
-- React Context for state management.
-
-## Risks
-- State becoming overly complex; will mitigate by modularizing components and context carefully.
-
-## Next Objectives
-- Draft `SocietyContext.jsx`.
-- Implement Digital Notice Board.
-- Implement Community Forum.
-- Implement Complaint Raising and Tracking.
-
-## Last Updated
-2026-10-02
+- Verify real signed-in resident/admin and mobile flows in correctly separated Clerk environments.
+- Verify migrations and backup/restore against the eventual production database.
+- Configure production secrets/database and document/test backup restore and migration rollback.
+- Owner/committee must authorize launch, designate an operator and initial administrator, approve data handling/retention and legal notices, and provide a support contact.
+- Complete qualified legal review. No launch is approved by this status page.

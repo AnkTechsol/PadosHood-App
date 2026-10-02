@@ -1,11 +1,5 @@
-# Prompt and Data Policy
+# AI prompt and data policy
 
-## Approved Data Sources
-- [TODO: List approved databases and APIs for AI context]
+No AI model, prompt, tool, retrieval source, or AI provider is approved for the current Angaan launch. Resident data must not be sent to an external AI service. The legacy civic AI-assistant code is not part of the society launch product.
 
-## Data Classification Boundaries
-- **Highly Sensitive Data:** MUST NOT be included in prompts.
-- **PII:** MUST be scrubbed or masked before passing to external LLMs.
-
-## Prompt Review Process
-- [TODO: Define who approves changes to system prompts]
+Before a future AI feature is considered, obtain explicit product-owner approval and document data minimization/classification, provider and model, permitted inputs, data retention/training terms, prompt/tool boundaries, injection defenses, output validation, human review, evaluation, logging, kill switch, and legal/privacy/security approval. Until those controls are reviewed, no prompt or data source is authorized.

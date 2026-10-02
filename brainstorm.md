@@ -1,9 +1,10 @@
-# Brainstorming Team
+# Product ideas (deferred)
 
-## Ideas
-- Gamification: Award points for attending society events or resolving community issues.
-- Integrated payment gateway for society maintenance dues.
-- Visitor management system integration.
+This file records ideas, not approved scope or promised work. Woodsville Phase 2 launch scope is defined in [SOCIETY_LAUNCH.md](docs/product/SOCIETY_LAUNCH.md).
 
-## Open Questions
-- Should we allow threaded comments in the forum or just a single level? (Leaning towards single level for simplicity initially).
+## Deferred ideas
+- Maintenance payment collection.
+- Visitor management.
+- Forum replies, reactions, or threaded discussion.
+
+None of these are part of the initial release. Do not collect payment, visitor, or additional resident data until the owner approves a scoped change and its security, privacy, and legal implications.

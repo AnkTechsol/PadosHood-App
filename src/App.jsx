@@ -1,164 +1,112 @@
-import React, { useContext, useState } from 'react';
-import { AppContext } from './context/AppContext';
-import { useSociety } from './context/SocietyContext';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import MobileNav from './components/MobileNav';
-import ProgressiveProfileModal from './components/ProgressiveProfileModal';
-import InstallPrompt from './components/InstallPrompt';
+import React, { useState } from 'react';
+import { useClerk, useUser } from '@clerk/react';
+import { api } from './lib/api.js';
+import { useResource } from './lib/useResource.js';
+import {
+  Account, Community, Complaints, ErrorState, LoadingState,
+  Members, NavIcon, Notices, Overview,
+} from './pages/society/PortalSections.jsx';
+import './society.css';
+import { LogOut, RefreshCw } from 'lucide-react';
 
-import Dashboard from './pages/Dashboard';
-import Complaints from './pages/Complaints';
-import Directory from './pages/Directory';
-import Emergency from './pages/Emergency';
-import Marketplace from './pages/Marketplace';
-import CommunityForum from './pages/CommunityForum';
-import Login from './pages/Login';
-import Onboarding from './pages/Onboarding';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import ResidentApprovals from './pages/ResidentApprovals';
+const NAV_ITEMS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'notices', label: 'Notices' },
+  { id: 'complaints', label: 'Maintenance' },
+  { id: 'community', label: 'Community' },
+  { id: 'members', label: 'Members', adminOnly: true },
+  { id: 'account', label: 'Account' },
+];
 
-import LiveMap from './pages/LiveMap';
-import News from './pages/News';
-import Events from './pages/Events';
-import Opportunities from './pages/Opportunities';
-import Transport from './pages/Transport';
-import AiAssistant from './pages/AiAssistant';
-import RealEstate from './pages/RealEstate';
+function MembershipForm({ initial, onSubmit, busy, error }) {
+  const [form, setForm] = useState(initial || { name: '', block: '', flat: '', residentType: 'Owner' });
+  const change = event => setForm(value => ({ ...value, [event.target.name]: event.target.value }));
+  return <form onSubmit={event => { event.preventDefault(); onSubmit({ name: form.name.trim(), block: form.block.trim(), flat: form.flat.trim(), residentType: form.residentType }); }}>
+    {error && <div className="inline-error" role="alert">{error}</div>}
+    <div className="field"><label htmlFor="join-name">Your name</label><input id="join-name" name="name" autoComplete="name" required minLength="2" maxLength="100" value={form.name} onChange={change}/></div>
+    <div className="form-grid"><div className="field"><label htmlFor="join-block">Block or tower</label><input id="join-block" name="block" required maxLength="40" value={form.block} onChange={change}/></div><div className="field"><label htmlFor="join-flat">Flat</label><input id="join-flat" name="flat" required maxLength="40" value={form.flat} onChange={change}/></div></div>
+    <div className="field"><label htmlFor="join-type">Resident type</label><select id="join-type" name="residentType" value={form.residentType} onChange={change}><option>Owner</option><option>Tenant</option></select></div>
+    <p className="field-help">Your request goes to the society committee for review. No identity documents or uploads are required.</p>
+    <div className="form-footer"><button className="primary-button" disabled={busy}>{busy ? 'Sending request…' : initial ? 'Reapply for membership' : 'Request membership'}</button></div>
+  </form>;
+}
 
-function AppContent() {
-  const { currentUser } = useContext(AppContext);
-  const { currentUser: societyUser, getActiveSociety } = useSociety();
+function PortalForUser({ user }) {
+  const { signOut } = useClerk();
+  const [tab, setTab] = useState('overview');
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [signingOut, setSigningOut] = useState(false);
+  const me = useResource('/api/me');
+  const health = useResource('/api/health');
+  const member = me.data?.member || null;
+  const identity = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || user?.fullName || '';
+  const monogram = (user?.fullName || identity || 'M').trim().slice(0, 1).toUpperCase();
 
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Progressive Profiling Modal State
-  const [profilingModal, setProfilingModal] = useState({
-    isOpen: false,
-    mode: 'general' // 'general', 'blood', 'ward'
-  });
-
-  const handleOpenProfiling = (mode = 'general') => {
-    setProfilingModal({ isOpen: true, mode });
+  const requestMembership = async body => {
+    setSubmitBusy(true); setSubmitError('');
+    try { await api('/api/membership', { method: 'POST', body }); me.refresh(); }
+    catch (error) { setSubmitError(error?.message || 'Your request could not be sent. Please try again.'); }
+    finally { setSubmitBusy(false); }
   };
-
-  const handleCloseProfiling = () => {
-    setProfilingModal({ isOpen: false, mode: 'general' });
+  const leave = async () => {
+    setSigningOut(true);
+    try { await signOut({ redirectUrl: '/' }); }
+    finally { setSigningOut(false); }
   };
+  const title = me.data?.society?.name || 'Woodsville Phase 2';
 
-  const renderContent = () => {
-    // If not onboarded (missing societyId), force onboarding
-    if (!societyUser?.societyId && activeTab !== 'profile') {
-      return <Onboarding onComplete={() => setActiveTab('dashboard')} />;
-    }
+  if (me.loading) return <div className="angaan"><div className="membership-wrap"><div className="membership-card panel"><LoadingState/></div></div></div>;
+  if (me.error) return <div className="angaan"><div className="membership-wrap"><section className="membership-card panel"><div className="membership-mark"><img src="/logo.svg" alt=""/></div><div className="eyebrow">Member access</div><h1>We couldn’t check your membership.</h1><p>Society access is verified by the server. Please retry before continuing.</p><ErrorState error={me.error} retry={me.refresh}/><button className="quiet-button" onClick={me.refresh}><RefreshCw size={16}/> Retry check</button></section></div></div>;
+  if (!member || member.status !== 'Approved') {
+    const pending = member?.status === 'Pending';
+    const rejected = member?.status === 'Rejected';
+    const suspended = member?.status === 'Suspended';
+    return <div className="angaan">
+      <header className="society-topbar"><div className="society-brand"><img src="/logo.svg" alt=""/><div><strong>Angaan</strong><span>{title}</span></div></div><div className="top-actions"><div className="identity-chip"><span className="identity-monogram">{monogram}</span><span className="identity-name">{identity}</span></div><button className="quiet-button" disabled={signingOut} onClick={leave}><LogOut size={16}/>{signingOut?'Signing out…':'Log out'}</button></div></header>
+      <main className="membership-wrap"><section className="membership-card panel">
+        <div className="membership-mark"><img src="/logo.svg" alt=""/></div>
+        <div className="eyebrow">Woodsville Phase 2 · Membership</div>
+        {pending ? <><h1>Your request is with the committee.</h1><p>Your application is pending review. Private society notices and member features will become available after approval.</p><div className="meta-line" style={{marginBottom:20}}><span className="status-tag pending">Pending review</span>{member.name} · {member.block} · {member.flat}</div><button className="soft-button" onClick={me.refresh}><RefreshCw size={15}/> Check status</button></>
+          : suspended ? <><h1>Membership access is paused.</h1><p>Your account is currently suspended from private society features. Please contact your committee through the channels you already use for society matters.</p><span className="status-tag suspended">Suspended</span><div style={{marginTop:20}}><button className="soft-button" onClick={me.refresh}><RefreshCw size={15}/> Refresh status</button></div></>
+          : <><h1>{rejected ? 'Reapply for resident access.' : 'A private space for your society.'}</h1><p>{rejected ? 'Your previous request was not approved. You can submit an updated membership request for committee review.' : 'Request membership to Woodsville Phase 2. The committee reviews every request before society information becomes available.'}</p><MembershipForm key={member?.id || 'new'} initial={member ? { name: member.name, block: member.block, flat: member.flat, residentType: member.residentType } : undefined} onSubmit={requestMembership} busy={submitBusy} error={submitError}/></>}
+        <p className="field-help" style={{marginTop:20}}>Read the <a href="/privacy" style={{color:'var(--forest)',fontWeight:700}}>operational privacy draft</a> before joining.</p>
+        <p className="field-help" style={{ overflowWrap: 'anywhere' }}>Account reference: <code>{user.id}</code>. If you are the committee’s designated first administrator, share this reference with the portal operator. It is not a password and does not grant access by itself.</p>
+      </section>
+      {member && <details className="panel" style={{ padding: 24, marginTop: 24, width: '100%', maxWidth: 680 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Manage or remove my application data</summary>
+        <div style={{ marginTop: 24 }}><Account member={member} identity={identity} onDeleted={me.refresh} /></div>
+      </details>}
+      </main>
+    </div>;
+  }
 
-    // Guest Mode / SaaS Revoked state check
-    const soc = getActiveSociety?.();
-    const isRevoked = soc?.planStatus === 'Revoked';
-    const isGuest = societyUser?.verificationStatus === 'Pending';
-    const isRestricted = isRevoked || isGuest;
-
-    if (activeTab === 'complaints' && isRestricted) return <GuestBlockMessage isRevoked={isRevoked} />;
-    
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard setActiveTab={setActiveTab} onOpenProfiling={handleOpenProfiling} />;
-      case 'marketplace':
-        return <Marketplace />;
-      case 'services':
-      case 'directory':
-        return <Directory />;
-      case 'emergency':
-        return <Emergency onOpenProfiling={handleOpenProfiling} />;
-      case 'ward':
-      case 'complaints':
-        return <Complaints onOpenProfiling={handleOpenProfiling} />;
-      case 'forum':
-        return <CommunityForum />;
-      case 'profile':
-        return <Login />;
-      case 'realestate':
-        return <RealEstate />;
-      case 'ai-assistant':
-      case 'aiAssistant':
-        return <AiAssistant />;
-      case 'transport':
-        return <Transport />;
-      case 'opportunities':
-        return <Opportunities />;
-      case 'news':
-        return <News />;
-      case 'events':
-        return <Events />;
-      case 'map':
-        return <LiveMap />;
-      case 'superadmin':
-        return <SuperAdminDashboard />;
-      case 'approvals':
-        return <ResidentApprovals />;
-      default:
-        return <Dashboard setActiveTab={setActiveTab} onOpenProfiling={handleOpenProfiling} />;
-    }
-  };
-
-  const GuestBlockMessage = ({ isRevoked }) => (
-    <div style={{ textAlign: 'center', padding: '4rem 1rem', animation: 'fadeIn 0.3s ease-in-out' }}>
-      <div className="card" style={{ maxWidth: '400px', margin: '0 auto', borderTop: '4px solid var(--danger)' }}>
-        <h3 style={{ color: 'var(--danger)', marginBottom: '1rem', fontWeight: '800' }}>Access Restricted</h3>
-        <p style={{ color: 'var(--text-main)', marginBottom: 0 }}>
-          {isRevoked 
-            ? "Your society's SaaS subscription has expired. Please contact your Society Admin." 
-            : "Your account is pending verification by the admin. You only have read access to community notices currently."}
-        </p>
-      </div>
+  const visibleItems = NAV_ITEMS.filter(item => !item.adminOnly || member.role === 'Admin');
+  const currentTab = visibleItems.some(item => item.id === tab) ? tab : 'overview';
+  let content;
+  switch (currentTab) {
+    case 'notices': content = <Notices member={member}/>; break;
+    case 'complaints': content = <Complaints member={member}/>; break;
+    case 'community': content = <Community member={member}/>; break;
+    case 'members': content = <Members member={member} refreshMe={me.refresh}/>; break;
+    case 'account': content = <Account member={member} identity={identity} onDeleted={me.refresh}/>; break;
+    default: content = <Overview member={member} setTab={setTab}/>;
+  }
+  return <div className="angaan society-shell">
+    <header className="society-topbar">
+      <div className="society-brand"><img src="/logo.svg" alt=""/><div><strong>Angaan</strong><span>{title}</span></div></div>
+      <div className="top-actions"><span className="meta-line" title={health.error ? 'Society service is unavailable' : 'Connection to society service'}><i style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:health.error?'#b7594f':health.loading?'#c4a353':'#6e9a70'}}/>{health.error?'Service issue':health.loading?'Connecting':'Connected'}</span>{health.error&&<button className="icon-button" aria-label="Retry service connection" onClick={health.refresh}><RefreshCw size={15}/></button>}<div className="identity-chip"><span className="identity-monogram">{monogram}</span><span className="identity-name">{identity}</span></div><button className="quiet-button" disabled={signingOut} onClick={leave}><LogOut size={16}/>{signingOut?'Signing out…':'Log out'}</button></div>
+    </header>
+    <div className="society-frame">
+      <aside className="society-sidebar"><div className="side-label">Your society</div><nav className="nav-stack" aria-label="Portal navigation">{visibleItems.map(item=><button key={item.id} className={`society-nav ${currentTab===item.id?'active':''}`} aria-current={currentTab===item.id?'page':undefined} onClick={()=>setTab(item.id)}><NavIcon name={item.id}/>{item.label}</button>)}</nav><div className="sidebar-note"><strong>Neighbour-led, member-only.</strong>Only updates from this society’s committee appear here. No civic advertisements or sample resident identities.</div></aside>
+      <main className="society-main">{content}</main>
     </div>
-  );
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
-      {/* Top Header Bar */}
-      <Header onOpenProfileModal={() => handleOpenProfiling('general')} />
-
-      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
-        {/* Left Desktop Sidebar */}
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
-
-        {/* Main Content Area */}
-        <main className="main-content-container" style={{
-          flex: 1,
-          padding: '1.5rem',
-          overflowY: 'auto',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          width: '100%',
-          paddingBottom: '5rem' // Padding for mobile bottom nav
-        }}>
-          {renderContent()}
-        </main>
-      </div>
-
-      {/* Mobile Bottom Navigation Bar */}
-      <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      {/* Progressive Profiling Modal */}
-      <ProgressiveProfileModal
-        isOpen={profilingModal.isOpen}
-        onClose={handleCloseProfiling}
-        mode={profilingModal.mode}
-      />
-      
-      {/* PWA Add to Homescreen Prompt */}
-      <InstallPrompt />
-    </div>
-  );
+  </div>;
 }
 
 export default function App() {
-  return <AppContent />;
+  const { isLoaded, isSignedIn, user } = useUser();
+  if (!isLoaded) return <div className="angaan"><div className="membership-wrap"><div className="membership-card panel"><LoadingState/></div></div></div>;
+  if (!isSignedIn || !user) return <div className="angaan"><div className="membership-wrap"><section className="membership-card panel"><div className="membership-mark"><img src="/logo.svg" alt=""/></div><div className="eyebrow">Woodsville Phase 2</div><h1>Sign in to continue.</h1><p>This is the signed-in resident portal. Sign in through the site’s account flow to check your membership.</p><a href="/" className="primary-button" style={{textDecoration:'none'}}>Back to Angaan</a></section></div></div>;
+  return <PortalForUser key={user.id} user={user}/>;
 }

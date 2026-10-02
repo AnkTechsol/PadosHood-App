@@ -1,22 +1,7 @@
-# Product Definition
+# Product direction
 
-## Original Product Idea
-Pivot an existing community app ("Aaple Moshi") into a premium residential society management platform.
+The owner selected Angaan for Woodsville Phase 2, an application intended for their own residential society and publication on Replit. The existing Aaple Moshi civic application is legacy material, not the launch product.
 
-## Problem Being Solved
-Generic civic complaints are not specific enough for society-specific workflows. Societies need a dedicated communication platform and a robust grievance tracking system.
+The minimum initial launch scope is resident joining and approval, notices, text discussion posts, resident-owned complaints with committee status updates, membership administration, and own-data export/application-account deletion. Authentication is Clerk; membership and permissions are held server-side in PostgreSQL. The canonical scope and non-goals are in [docs/product/SOCIETY_LAUNCH.md](docs/product/SOCIETY_LAUNCH.md).
 
-## Target Users
-1. **Resident**: Can view notices, engage in forums, and raise/track complaints.
-2. **Committee Member (Admin)**: Can post notices, update complaint statuses, and assign tasks.
-
-## Core Value Proposition
-A modern, premium, and responsive platform that centralizes society communication and complaint management, mimicking a native app experience on mobile devices with a high-end aesthetic.
-
-## Product Principles
-- Clean typography, subtle glassmorphism, distinct card layouts, dynamic hover effects.
-- Perfect mobile responsiveness.
-- Clear role-based access control (RBAC).
-
-## Intended Outcome
-A seamless web app providing digital notice boards, community forums, and a 4-stage transparent complaint lifecycle.
+This is a product direction, not a release assertion. Implementation, legal approval, committee authorization, and production operations remain separate gates.

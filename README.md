@@ -1,16 +1,17 @@
-# React + Vite
+# Angaan — Woodsville Phase 2
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This repository is being prepared for a society-management application for the owner's Woodsville Phase 2 society. The older Aaple Moshi civic demo is retained as legacy material and is not the launch service.
 
-Currently, two official plugins are available:
+## Read first
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- [Launch scope and release prerequisites](docs/product/SOCIETY_LAUNCH.md)
+- [API contract](docs/engineering/API.md)
+- [Architecture](docs/engineering/ARCHITECTURE.md)
+- [Runbook](docs/engineering/RUNBOOK.md)
+- [Full Markdown audit and status](docs/engineering/DOCUMENTATION_AUDIT.md)
 
-## React Compiler
+## Current status
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The society app is wired through `src/main.jsx` → `src/entry/AppRouter.jsx` → `src/App.jsx`, with Clerk, Express, Vite development proxy, built-frontend serving, and an optional exact-ID startup admin bootstrap. Latest parent-reported evidence includes passing build and 4/4 tests, full lint exit 0 with 89 legacy/dormant-code warnings (active-code targeted lint clean), and a local production-mode serving smoke in the development workspace. See [release evidence](docs/engineering/RELEASE_EVIDENCE.md) for scope and test safety instructions.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+**NOT READY FOR RESIDENT RELEASE.** The autoscale configuration is saved but has not been published. The local production-mode smoke is not a production deployment. No completed signed-in resident/admin or mobile authentication/workflow, or production backup/restore, has been verified. Society/legal/operator/support/retention decisions remain open; no initial administrator is designated or appointed, and no resident rollout has occurred. The verified first administrator must be appointed through the documented operator bootstrap. `/privacy` is an operational explanation, not a legally approved privacy policy. Do not enter production resident data until release approval.

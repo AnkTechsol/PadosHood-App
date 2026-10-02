@@ -1,5 +1,5 @@
-# Temporary Memory
+# Retired implementation notes
 
-- Will need to mock users for RBAC testing (e.g., currentUser role = 'Resident' or 'Admin').
-- Need to ensure glassmorphism CSS classes are added to `index.css`.
-- Notice attachments and complaint images will just be mocked strings/booleans for now.
+The earlier notes proposed mock role switching and fake attachments; those ideas are not valid for the selected society service. Production identity must come from Clerk, roles from PostgreSQL membership, and permissions from the server.
+
+No resident demo data, fake authentication, attachment uploads, or health/contact data should be added to active production paths. For launch requirements and open owner decisions see [docs/product/SOCIETY_LAUNCH.md](docs/product/SOCIETY_LAUNCH.md).

@@ -1,4 +1,6 @@
-# Model Card: [Model Name]
+# Model card template — future use only
+
+This is an unfilled template, not a deployed model card. No AI system is approved in the current launch scope. Do not fill it with invented provider/model facts.
 
 ## Model Details
 - **Provider:** [TODO]

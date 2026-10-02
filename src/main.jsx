@@ -1,17 +1,12 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './core/App.jsx'
-import './core/index.css'
-import { AppProvider } from './shared/context/AppContext.jsx'
-import { SocietyProvider } from './context/SocietyContext.jsx'
+import AppRouter from './entry/AppRouter.jsx'
+import './society.css'
+import './entry/entry.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppProvider>
-      <SocietyProvider>
-        <App />
-      </SocietyProvider>
-    </AppProvider>
+    <AppRouter />
   </React.StrictMode>,
 )
 

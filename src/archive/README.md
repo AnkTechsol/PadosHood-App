@@ -1,22 +1,7 @@
-# 📦 Archive — Aaple Moshi Flat Structure (Original)
+# Archived Aaple Moshi civic prototype
 
-This folder contains the **original flat-structure source code** of the Aaple Moshi app
-as it existed before the decoupled feature-folder refactor.
+This directory preserves legacy civic-demo source for reference. It is not the Angaan Woodsville Phase 2 society application and must not be imported into the launch path, treated as an authorization boundary, or used as evidence of society features.
 
-## ⚠️ Do Not Edit
-These files are archived for reference only. All active development happens in:
-- `src/features/` — decoupled feature modules
-- `src/core/` — app shell (routing, layout)
-- `src/shared/` — cross-feature utilities
+Legacy files may contain simulated users/roles, browser-local data, old civic functionality, or sample data whose provenance is not established. Do not expose that data to residents or migrate it into the society database. No resident demo seeds are part of the active launch database.
 
-## Contents
-| Folder | Description |
-|--------|-------------|
-| `pages/` | Original 12 flat page components |
-| `components/` | Original Sidebar and EmergencyBar |
-| `context/` | Original monolithic AppContext |
-| `index.css` | Original design system CSS |
-| `App.jsx` | Original flat router |
-
-## Archived On
-2026-07-29 — Before feature-folder migration
+Only edit archived files when explicitly working on archive maintenance; active society work belongs to the current application/backend modules and must follow [the launch scope](../../docs/product/SOCIETY_LAUNCH.md). Archive contents are retained, not endorsed or guaranteed secure/current.

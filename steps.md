@@ -1,29 +1,12 @@
-# Execution Planner
+# Society launch work plan
 
-## Phase 1: Foundation and State Management
-- [ ] Objective: Set up global state for society features.
-  - [ ] Task: Create `SocietyContext.jsx`.
-  - [ ] Subtask: Define data structures for notices, forum posts, and complaints (including timeline array and feedback object).
-  - [ ] Subtask: Create context provider and custom hook.
-  - [ ] Validation: State can be accessed and updated from dummy components.
+This replaces the superseded mock-React-Context plan. The approved scope and acceptance criteria are in [docs/product/SOCIETY_LAUNCH.md](docs/product/SOCIETY_LAUNCH.md); do not add features absent from that contract without owner approval. Implementation checks are recorded in [release evidence](docs/engineering/RELEASE_EVIDENCE.md).
 
-## Phase 2: Society Communication Module
-- [ ] Objective: Build Digital Notice Board and Community Forum.
-  - [ ] Task: Create Digital Notice Board.
-    - [ ] Subtask: Build `NoticeCard.jsx` with premium aesthetic (urgent highlights).
-    - [ ] Subtask: Build Admin Notice creation form.
-  - [ ] Task: Create Community Forum.
-    - [ ] Subtask: Build `ForumPost.jsx` (likes, comments, tags).
-    - [ ] Subtask: Build Forum Feed layout.
-  - [ ] Validation: Notices and forum posts render correctly from state and can be added/updated.
+1. [x] Integrate Express+Vite development, production serving, Clerk proxy/session flow, and active society client routing.
+2. [x] Implement contracted society UI/API workflows and server-side authorization; see current source and API contract.
+3. [x] Add and execute targeted API, origin, build, and lint checks. Current evidence and caveats are in the release report.
+4. [ ] Verify real signed-in resident/admin flows and mobile layout/workflows in non-production.
+5. [ ] Configure isolated Clerk development/production instances and PostgreSQL databases/secrets, migrate the production database, establish backup/restore, and appoint the verified initial admin out of band.
+6. [ ] Obtain committee approval and qualified legal review for actual operator/contact/retention/policy details; verify publishing and rollback.
 
-## Phase 3: Complaint Management System
-- [ ] Objective: Build Resident and Admin views for complaints.
-  - [ ] Task: Resident Complaint Raising.
-    - [ ] Subtask: Build `ComplaintForm.jsx`.
-  - [ ] Task: Resident Complaint Tracking.
-    - [ ] Subtask: Build `ComplaintStepper.jsx` for 4-stage tracking.
-  - [ ] Task: Admin Management Dashboard.
-    - [ ] Subtask: Build Kanban/Table view for complaints.
-    - [ ] Subtask: Add filtering, assignment, and SLA highlighting.
-  - [ ] Validation: Full lifecycle of a complaint works seamlessly between resident and admin views.
+Autoscale configuration is saved but not published. The release owner must maintain evidence for each remaining gate; passing engineering checks do not approve resident launch.

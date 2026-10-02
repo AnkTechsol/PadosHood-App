@@ -1,21 +1,38 @@
-# Running this imported project
+# Angaan · Woodsville Phase 2
 
-- Stack: React 19, JavaScript/JSX, Vite, npm, vanilla CSS and vite-plugin-pwa.
-- Run the **Start application** workflow (`npm run dev`). Vite listens on `0.0.0.0:5000` and accepts Replit preview hosts.
-- Build: `npm run build`. Output: `dist/`.
-- Lint: `npm run lint`. Existing warnings remain; this is not a clean production-quality gate.
-- Entry: `src/main.jsx` loads `src/core/App.jsx`, the civic demo. The separate society screens under `src/pages/` are not the active application.
+The owner selected Angaan as the resident portal for their own society and wants Replit publishing. Preserve the imported React/JavaScript/Vite/npm/vanilla-CSS structure. Do not migrate frameworks or add other societies, civic advertisements, billing, document uploads or AI without approval.
 
-## Current safety and release status
+## Run and verify
 
-This is an interactive prototype, not a production society service. Authentication is simulated, records are browser-local, authorization is not server-enforced, and `src/lib/supabase.js` is not a connected database client. Do not enter real resident details or documents.
+- **Start application** workflow: `npm run dev` runs a single Express server with Vite middleware on `0.0.0.0:5000`.
+- `npm run build`: builds the client/PWA into `dist/`.
+- `npm start`: production Express serves `dist/`, API and Clerk proxy.
+- `npm run db:migrate`: applies additive `ang_*` schema; startup also runs it under a transaction lock.
+- `npm test`: Node API/security tests using an isolated temporary database schema, never real resident fixtures.
+- `npm run lint`: full-repository check; legacy warnings remain. Targeted active-code lint is clean.
 
-The owner wants to prepare the project for their own society and publish on Replit. Confirm the target product and operational requirements before substantial changes. Preserve the existing stack and structure unless a change is explicitly approved.
+Some imported workspaces label `REPLIT_ENVIRONMENT=production` despite having no published app. In that case the API tests require `DEVELOPMENT_DB_FINGERPRINT`, independently obtained with the development SQL tool; see the runbook. Never override the test production-mode guard or point tests at a production database.
 
-## Verification performed
+## Active implementation
 
-Dependency installation and `npm run build` succeeded. `npm run lint` completed with warnings. The Replit preview rendered the registration screen without browser errors. Signed-in screens and resident workflows have not been verified; there is no test script in the imported package manifest.
+`src/main.jsx` loads `src/entry/AppRouter.jsx`, then `src/App.jsx` at `/user-portal`. `server/index.js` verifies Clerk sessions and serves `/api`; PostgreSQL owns membership and permissions. Browser data/roles are never trusted. The old civic `src/core`, features, contexts, pages and archive are retained reference code, not the active app. The Supabase helper/schema are legacy, not a dependency to configure.
 
-## Publishing
+Launch scope: membership requests/approval, notice management, private complaints with status history, society discussions, member administration and self-service export/deletion. Pending/rejected/suspended members cannot access society content but can export/delete their application data.
 
-The current frontend can be built as static files in `dist`, but it is not ready for resident use. Replit publishing configuration must match the final architecture. A real backend, identity provider and shared persistence require implementation, not merely environment variables. Never use Vite's development server as a production server or put private credentials in frontend environment variables.
+## Configuration and administrator setup
+
+Runtime requires managed `DATABASE_URL`, `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`; client build uses Clerk's public `VITE_CLERK_PUBLISHABLE_KEY`. Private credentials remain in Replit Secrets. Canonical Clerk provider/proxy wiring is required for production; do not manually change managed keys or add bearer tokens to web requests.
+
+No default/first-signup administrator exists. A designated committee representative signs up and submits a joining request. An operator verifies the person out of band and can appoint their exact Account reference through `SOCIETY_INITIAL_ADMIN_USER_ID` in the intended environment, followed by restart/republish. This startup bootstrap is audited and executes once per designated ID; it cannot resurrect later-suspended/deleted membership. Clear the setup variable after verifying appointment. The local `npm run admin -- <clerk-user-id>` CLI is an alternative only against the intended authorized database. Never expose or manually copy production credentials into the development shell.
+
+Development and production Clerk accounts are separate; appoint the production account independently.
+
+## Publishing and release gates
+
+Configured Autoscale: build `npm run build`, run `npm start`. Not published yet. Do not switch to Static: the API and Clerk proxy need a server.
+
+Verified: build, four automated API/security tests (no skips), clean targeted lint, full lint exit 0 with 89 legacy warnings, development health 200 and private API 401, local production-serving smoke, desktop/mobile public landing and mobile sign-up rendering.
+
+**NOT READY FOR RESIDENT RELEASE:** first administrator not appointed; real signed-in UI not verified; production database/auth, backup/restore and monitoring not verified; committee/operator support, retention, privacy and legal approvals outstanding. `/privacy` is operational launch information, not an approved legal policy.
+
+See `docs/product/SOCIETY_LAUNCH.md`, `docs/engineering/API.md`, `RUNBOOK.md`, `RELEASE_EVIDENCE.md` and `DOCUMENTATION_AUDIT.md` under `docs/engineering/`.

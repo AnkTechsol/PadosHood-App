@@ -13,10 +13,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        navigateFallbackDenylist: [/^\/api\//, /^\/sign-in/, /^\/sign-up/, /^\/user-portal/],
+        runtimeCaching: [],
+      },
       manifest: {
         name: 'Angaan App',
         short_name: 'Angaan',
-        description: 'Premium Residential Society Management',
+        description: 'The resident portal for Woodsville Phase 2',
         theme_color: '#047857',
         background_color: '#ffffff',
         display: 'standalone',

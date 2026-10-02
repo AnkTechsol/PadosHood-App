@@ -1,4 +1,6 @@
-# PRD: [Feature Name]
+# Product requirements template (not an approved feature)
+
+Copy for a new proposal; replace all prompts before review. This template is not approval to collect data or add a feature. The current selected product/scope is [Woodsville Phase 2](SOCIETY_LAUNCH.md).
 
 ## Problem Statement
 [TODO: Explain the problem being solved]
@@ -17,7 +19,7 @@
 - [TODO]
 
 ## Analytics / Metrics
-- [TODO: What defines success?]
+- State whether measurement is necessary; no analytics provider or personal-data telemetry is currently approved.
 
 ## Privacy / Security Impact
 - [TODO: Any new data collected or exposed?]
