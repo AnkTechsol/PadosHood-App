@@ -1,24 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, X, Share } from 'lucide-react';
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
+    // Check if device is iOS
+    const isIosDevice = 
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    // Check if already installed (standalone mode)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    if (isIosDevice && !isStandalone) {
+      setIsIOS(true);
+      setShowPrompt(true);
     }
 
     const handleBeforeInstallPrompt = (e) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
-      setIsInstallable(true);
+      setShowPrompt(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -30,55 +34,88 @@ export default function InstallPrompt() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    
-    // Show the install prompt
     deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    
-    // We've used the prompt, and can't use it again, throw it away
-    setDeferredPrompt(null);
-    setIsInstallable(false);
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowPrompt(false);
+    }
   };
 
-  if (!isInstallable || isInstalled) return null;
+  const handleDismiss = () => {
+    setShowPrompt(false);
+  };
+
+  if (!showPrompt) return null;
 
   return (
-    <div className="glass-panel" style={{
+    <div style={{
       position: 'fixed',
-      bottom: '5.5rem', // Just above mobile nav
-      left: '1rem',
-      right: '1rem',
-      padding: '1rem',
-      borderRadius: 'var(--radius-md)',
-      zIndex: 9999,
+      bottom: '20px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      backgroundColor: 'var(--bg-card, #ffffff)',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+      borderRadius: '12px',
+      padding: '16px',
+      zIndex: 99999,
       display: 'flex',
-      flexDirection: 'column',
-      gap: '0.75rem',
-      animation: 'slideUp 0.3s ease-out'
+      alignItems: 'center',
+      gap: '12px',
+      width: 'calc(100% - 40px)',
+      maxWidth: '400px',
+      border: '1px solid var(--border, #eee)'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h4 style={{ margin: 0, fontWeight: '800', color: 'var(--primary-dark)', fontSize: '1rem' }}>
-            Install Angaan App
-          </h4>
-          <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Add to homescreen for a faster native experience.
+      <div style={{ flex: 1 }}>
+        <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', color: 'var(--text-main, #333)' }}>Install Angaan App</h4>
+        {isIOS ? (
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted, #666)', lineHeight: '1.4' }}>
+            Tap <Share size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> then "Add to Home Screen"
           </p>
-        </div>
-        <button 
-          className="btn btn-primary" 
-          onClick={handleInstallClick}
-          style={{ padding: '0.5rem 1rem' }}
-        >
-          <Download size={16} style={{ marginRight: '0.4rem' }}/> Install
-        </button>
+        ) : (
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted, #666)' }}>
+            Add to home screen for quick access
+          </p>
+        )}
       </div>
       
-      <div style={{ fontSize: '0.65rem', textAlign: 'center', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
-        Courtesy of <strong>anktechsol.com</strong>
-      </div>
+      {!isIOS && (
+        <button 
+          onClick={handleInstallClick}
+          style={{
+            backgroundColor: 'var(--primary, #294a3e)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 12px',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <Download size={14} /> Install
+        </button>
+      )}
+
+      <button 
+        onClick={handleDismiss}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: '4px',
+          cursor: 'pointer',
+          color: 'var(--text-muted, #666)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        aria-label="Dismiss"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
 }

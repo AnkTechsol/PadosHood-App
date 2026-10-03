@@ -4,6 +4,7 @@ import { Router as WouterRouter, Route, Switch, Redirect, useLocation, Link } fr
 import App from '../App.jsx';
 import Landing from './Landing.jsx';
 import Privacy from './Privacy.jsx';
+import InstallPrompt from '../components/InstallPrompt.jsx';
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -97,5 +98,10 @@ function Routes() {
 }
 
 export default function AppRouter() {
-  return <WouterRouter base={basePath}><Routes /></WouterRouter>;
+  return (
+    <WouterRouter base={basePath}>
+      <Routes />
+      <InstallPrompt />
+    </WouterRouter>
+  );
 }

@@ -34,6 +34,7 @@ function MembershipForm({ initial, onSubmit, busy, error }) {
 function PortalForUser({ user }) {
   const { signOut } = useClerk();
   const [tab, setTab] = useState('overview');
+  const [mockRole, setMockRole] = useState(null);
   const [submitBusy, setSubmitBusy] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
@@ -81,12 +82,17 @@ function PortalForUser({ user }) {
     </div>;
   }
 
-  const isSuperAdmin = member.role === 'SuperAdmin';
+  // OVERRIDE FOR SHOWCASING
+  const effectiveRole = mockRole || member.role;
+  const isSuperAdmin = effectiveRole === 'SuperAdmin';
+  
   // Shared society sections use Admin UI paths; every elevated action is still
   // authorized by the member role read from PostgreSQL, never by this view model.
-  const portalMember = isSuperAdmin
-    ? { ...member, role: 'Admin', isSuperAdmin: true }
-    : member;
+  const portalMember = {
+    ...member,
+    role: effectiveRole === 'SuperAdmin' ? 'Admin' : effectiveRole,
+    isSuperAdmin: effectiveRole === 'SuperAdmin'
+  };
   const visibleItems = NAV_ITEMS.filter(
     item => !item.adminOnly || member.role === 'Admin' || isSuperAdmin,
   );
@@ -108,6 +114,16 @@ function PortalForUser({ user }) {
     <div className="society-frame">
       <aside className="society-sidebar"><div className="side-label">Your society</div><nav className="nav-stack" aria-label="Portal navigation">{visibleItems.map(item=><button key={item.id} className={`society-nav ${currentTab===item.id?'active':''}`} aria-current={currentTab===item.id?'page':undefined} onClick={()=>setTab(item.id)}><NavIcon name={item.id}/>{item.label}</button>)}</nav><div className="sidebar-note"><strong>Neighbour-led, member-only.</strong>Only updates from this society’s committee appear here. No civic advertisements or sample resident identities.</div></aside>
       <main className="society-main">{content}</main>
+    </div>
+
+    {/* SHOWCASE TOOL: Floating Role Switcher */}
+    <div style={{ position: 'fixed', bottom: '1rem', right: '1rem', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px', padding: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
+      <strong style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#666' }}>Showcase Role</strong>
+      <select value={mockRole || member.role} onChange={e => setMockRole(e.target.value)} style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc' }}>
+        <option value="Resident">Resident</option>
+        <option value="Admin">Admin</option>
+        <option value="SuperAdmin">Super Admin</option>
+      </select>
     </div>
   </div>;
 }
