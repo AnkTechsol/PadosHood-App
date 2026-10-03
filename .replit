@@ -50,4 +50,3 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.development]
-SOCIETY_INITIAL_SUPER_ADMIN_USER_ID = "user_3KASIecJbp6D6okxzzFmk1rka93"
