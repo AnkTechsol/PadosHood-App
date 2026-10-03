@@ -71,7 +71,7 @@ function PortalForUser({ user }) {
           : suspended ? <><h1>Membership access is paused.</h1><p>Your account is currently suspended from private society features. Please contact your committee through the channels you already use for society matters.</p><span className="status-tag suspended">Suspended</span><div style={{marginTop:20}}><button className="soft-button" onClick={me.refresh}><RefreshCw size={15}/> Refresh status</button></div></>
           : <><h1>{rejected ? 'Reapply for resident access.' : 'A private space for your society.'}</h1><p>{rejected ? 'Your previous request was not approved. You can submit an updated membership request for committee review.' : 'Request membership to Woodsville Phase 2. The committee reviews every request before society information becomes available.'}</p><MembershipForm key={member?.id || 'new'} initial={member ? { name: member.name, block: member.block, flat: member.flat, residentType: member.residentType } : undefined} onSubmit={requestMembership} busy={submitBusy} error={submitError}/></>}
         <p className="field-help" style={{marginTop:20}}>Read the <a href="/privacy" style={{color:'var(--forest)',fontWeight:700}}>operational privacy draft</a> before joining.</p>
-        <p className="field-help" style={{ overflowWrap: 'anywhere' }}>Account reference: <code>{user.id}</code>. If you are the committee’s designated first administrator, share this reference with the portal operator. It is not a password and does not grant access by itself.</p>
+         <p className="field-help" style={{ overflowWrap: 'anywhere' }}>Account reference: <code>{user.id}</code>. It is not a password and does not grant access by itself. Keep it private; the operator may request it to verify a membership.</p>
       </section>
       {member && <details className="panel" style={{ padding: 24, marginTop: 24, width: '100%', maxWidth: 680 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Manage or remove my application data</summary>
@@ -81,16 +81,24 @@ function PortalForUser({ user }) {
     </div>;
   }
 
-  const visibleItems = NAV_ITEMS.filter(item => !item.adminOnly || member.role === 'Admin');
+  const isSuperAdmin = member.role === 'SuperAdmin';
+  // Shared society sections use Admin UI paths; every elevated action is still
+  // authorized by the member role read from PostgreSQL, never by this view model.
+  const portalMember = isSuperAdmin
+    ? { ...member, role: 'Admin', isSuperAdmin: true }
+    : member;
+  const visibleItems = NAV_ITEMS.filter(
+    item => !item.adminOnly || member.role === 'Admin' || isSuperAdmin,
+  );
   const currentTab = visibleItems.some(item => item.id === tab) ? tab : 'overview';
   let content;
   switch (currentTab) {
-    case 'notices': content = <Notices member={member}/>; break;
-    case 'complaints': content = <Complaints member={member}/>; break;
-    case 'community': content = <Community member={member}/>; break;
-    case 'members': content = <Members member={member} refreshMe={me.refresh}/>; break;
-    case 'account': content = <Account member={member} identity={identity} onDeleted={me.refresh}/>; break;
-    default: content = <Overview member={member} setTab={setTab}/>;
+    case 'notices': content = <Notices member={portalMember}/>; break;
+    case 'complaints': content = <Complaints member={portalMember}/>; break;
+    case 'community': content = <Community member={portalMember}/>; break;
+    case 'members': content = <Members member={portalMember} refreshMe={me.refresh}/>; break;
+    case 'account': content = <Account member={portalMember} identity={identity} onDeleted={me.refresh}/>; break;
+    default: content = <Overview member={portalMember} setTab={setTab}/>;
   }
   return <div className="angaan society-shell">
     <header className="society-topbar">

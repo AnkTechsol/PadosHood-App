@@ -171,19 +171,77 @@ export function Community({ member }) {
 }
 
 export function Members({ member, refreshMe }) {
-  const [offset,setOffset]=useState(0);const [busyId,setBusyId]=useState('');const [actionError,setActionError]=useState('');
-  const resource=useResource(`/api/members?limit=${PAGE_SIZE}&offset=${offset}`);const members=resource.data?.items||[];
-  const apply=async (target,patch,description)=>{
-    if(target.userId===member.userId && patch.status==='Approved' && target.status!=='Approved'){setActionError('You cannot approve your own membership.');return;}
-    if(!window.confirm(`${description} ${target.name}?`))return;
-    setBusyId(target.id);setActionError('');
-    try{await api(`/api/members/${target.id}`,{method:'PATCH',body:patch});resource.refresh();refreshMe();}
-    catch(e){setActionError(textOf(e));}finally{setBusyId('');}
+  const [offset, setOffset] = useState(0);
+  const [busyId, setBusyId] = useState('');
+  const [actionError, setActionError] = useState('');
+  const resource = useResource(`/api/members?limit=${PAGE_SIZE}&offset=${offset}`);
+  const members = resource.data?.items || [];
+  const canManageAdmins = member.isSuperAdmin === true;
+  const apply = async (target, patch, description) => {
+    if (target.role === 'SuperAdmin') {
+      setActionError('The Super Admin account cannot be changed from this page.');
+      return;
+    }
+    if (!canManageAdmins && target.role === 'Admin') {
+      setActionError('Only the Super Admin can change an administrator account.');
+      return;
+    }
+    if (target.userId === member.userId && patch.status === 'Approved' && target.status !== 'Approved') {
+      setActionError('You cannot approve your own membership.');
+      return;
+    }
+    if (!window.confirm(`${description} ${target.name}?`)) return;
+    setBusyId(target.id);
+    setActionError('');
+    try {
+      await api(`/api/members/${target.id}`, { method: 'PATCH', body: patch });
+      resource.refresh();
+      refreshMe();
+    } catch (error) {
+      setActionError(textOf(error));
+    } finally {
+      setBusyId('');
+    }
+  };
+  const renderActions = memberRecord => {
+    const isProtected = memberRecord.role === 'SuperAdmin';
+    const canReview = !isProtected && (memberRecord.role !== 'Admin' || canManageAdmins);
+    return <div className="row-actions">
+      {canReview && memberRecord.status === 'Pending' && <>
+        <button className="primary-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { status: 'Approved' }, 'Approve access for')}>Approve</button>
+        <button className="soft-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { status: 'Rejected' }, 'Reject request from')}>Reject</button>
+      </>}
+      {canReview && memberRecord.status === 'Rejected' && <button className="primary-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { status: 'Approved' }, 'Approve access for')}>Approve</button>}
+      {canReview && memberRecord.status === 'Approved' && <button className="soft-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { status: 'Suspended' }, 'Suspend access for')}>Suspend</button>}
+      {canReview && memberRecord.status === 'Suspended' && <button className="primary-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { status: 'Approved' }, 'Resume access for')}>Resume</button>}
+      {canManageAdmins && memberRecord.role === 'Resident' && memberRecord.status === 'Approved' && <button className="soft-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { role: 'Admin' }, 'Promote to committee administrator:')}>Make admin</button>}
+      {canManageAdmins && memberRecord.role === 'Admin' && <button className="soft-button small-button" disabled={!!busyId} onClick={() => apply(memberRecord, { role: 'Resident' }, 'Remove administrator access for')}>Remove admin</button>}
+    </div>;
   };
   return <>
-    <PageHeading eyebrow="Committee workspace" title="Membership" subtitle="Review joining requests and manage approved access. Membership decisions are enforced by the society service."/>
+    <PageHeading
+      eyebrow={canManageAdmins ? 'Society administration' : 'Committee workspace'}
+      title="Membership"
+      subtitle={canManageAdmins
+        ? 'Review joining requests and appoint or suspend administrator accounts.'
+        : 'Review resident joining requests and manage approved access.'}
+    />
     {actionError&&<div className="error-box" role="alert">{actionError}</div>}
-    {resource.loading?<LoadingState/>:resource.error?<ErrorState error={resource.error} retry={resource.refresh}/>:members.length?<><section className="panel" aria-label="Society members">{members.map(m=><article className="member-row" key={m.id}><div className="member-person"><span className="avatar">{m.name.trim().slice(0,1).toUpperCase()}</span><div><strong>{m.name}</strong><small>{m.block} · {m.flat} · {m.residentType}</small></div></div><div><span className={`status-tag ${m.status.toLowerCase()}`}>{m.status}</span></div><div><span className="status-tag">{m.role}</span></div><div className="row-actions">{m.status==='Pending'&&<><button className="primary-button small-button" disabled={!!busyId} onClick={()=>apply(m,{status:'Approved'},'Approve access for')}>Approve</button><button className="soft-button small-button" disabled={!!busyId} onClick={()=>apply(m,{status:'Rejected'},'Reject request from')}>Reject</button></>}{m.status==='Rejected'&&<button className="primary-button small-button" disabled={!!busyId} onClick={()=>apply(m,{status:'Approved'},'Approve access for')}>Approve</button>}{m.status==='Approved'&&<button className="soft-button small-button" disabled={!!busyId} onClick={()=>apply(m,{status:'Suspended'},'Suspend access for')}>Suspend</button>}{m.status==='Suspended'&&<button className="primary-button small-button" disabled={!!busyId} onClick={()=>apply(m,{status:'Approved'},'Resume access for')}>Resume</button>}{m.role==='Resident'&&m.status==='Approved'&&<button className="soft-button small-button" disabled={!!busyId} onClick={()=>apply(m,{role:'Admin'},'Promote to committee administrator:')}>Make admin</button>}{m.role==='Admin'&&<button className="soft-button small-button" disabled={!!busyId} onClick={()=>apply(m,{role:'Resident'},'Remove administrator access for')}>Remove admin</button>}</div></article>)}</section><Pagination offset={offset} setOffset={setOffset} hasMore={resource.data.hasMore} itemCount={members.length}/></>:<EmptyState title="No member records on this page">Membership requests from residents will appear here.</EmptyState>}
+    {resource.loading ? <LoadingState/> : resource.error ? <ErrorState error={resource.error} retry={resource.refresh}/>
+      : members.length ? <>
+        <section className="panel" aria-label="Society members">
+          {members.map(m => <article className="member-row" key={m.id}>
+            <div className="member-person">
+              <span className="avatar">{m.name.trim().slice(0, 1).toUpperCase()}</span>
+              <div><strong>{m.name}</strong><small>{m.block} · {m.flat} · {m.residentType}</small></div>
+            </div>
+            <div><span className={`status-tag ${m.status.toLowerCase()}`}>{m.status}</span></div>
+            <div><span className="status-tag">{m.role === 'SuperAdmin' ? 'Super Admin' : m.role}</span></div>
+            {renderActions(m)}
+          </article>)}
+        </section>
+        <Pagination offset={offset} setOffset={setOffset} hasMore={resource.data.hasMore} itemCount={members.length}/>
+      </> : <EmptyState title="No member records on this page">Membership requests from residents will appear here.</EmptyState>}
   </>;
 }
 
@@ -204,8 +262,17 @@ export function Account({ member, identity, onDeleted }) {
   return <>
     <PageHeading eyebrow="Your details" title="Account" subtitle="Review the identity and society information attached to this portal account."/>
     {error&&<div className="error-box" role="alert">{error}</div>}{message&&<div className="inline-error" style={{color:'#426849',background:'#e4efe1',borderColor:'#d4e5d0'}} role="status">{message}</div>}
-    <section className="panel panel-pad"><div className="section-title"><h2>Portal profile</h2><span className="status-tag approved">{member.status}</span></div><div className="account-grid"><div className="account-detail"><span>Display name</span><strong>{member.name}</strong></div><div className="account-detail"><span>Sign-in identity</span><strong>{identity||'Provided by Clerk'}</strong></div><div className="account-detail"><span>Residence</span><strong>{member.block} · {member.flat}</strong></div><div className="account-detail"><span>Resident type</span><strong>{member.residentType}</strong></div><div className="account-detail"><span>Society role</span><strong>{member.role}</strong></div></div><button className="soft-button" onClick={exportData} disabled={busy}><ArrowDownToLine size={16}/>{busy?'Preparing…':'Download my data'}</button></section>
-    <section className="panel panel-pad account-danger" style={{marginTop:18}}><h2>Delete application account</h2><p>This permanently deletes your Angaan membership and your own complaints and community posts from the application. It does not delete your Clerk identity or sign-in credentials. To request provider-side identity deletion, contact the service operator.</p><button className="danger-button" onClick={removeAccount} disabled={busy}><Trash2 size={16}/>{busy?'Working…':'Delete my Angaan data'}</button></section>
+    <section className="panel panel-pad"><div className="section-title"><h2>Portal profile</h2><span className="status-tag approved">{member.status}</span></div><div className="account-grid"><div className="account-detail"><span>Display name</span><strong>{member.name}</strong></div><div className="account-detail"><span>Sign-in identity</span><strong>{identity||'Provided by Clerk'}</strong></div><div className="account-detail"><span>Residence</span><strong>{member.block} · {member.flat}</strong></div><div className="account-detail"><span>Resident type</span><strong>{member.residentType}</strong></div><div className="account-detail"><span>Society role</span><strong>{member.isSuperAdmin ? 'Super Admin' : member.role}</strong></div></div><button className="soft-button" onClick={exportData} disabled={busy}><ArrowDownToLine size={16}/>{busy?'Preparing…':'Download my data'}</button></section>
+    {member.isSuperAdmin
+      ? <section className="panel panel-pad" style={{marginTop:18}}>
+        <h2>Protected administrator account</h2>
+        <p>Super Admin access cannot be removed from this page. Contact the authorized operator to transfer it to another verified account.</p>
+      </section>
+      : <section className="panel panel-pad account-danger" style={{marginTop:18}}>
+        <h2>Delete application account</h2>
+        <p>This permanently deletes your Angaan membership and your own complaints and community posts from the application. It does not delete your Clerk identity or sign-in credentials. To request provider-side identity deletion, contact the service operator.</p>
+        <button className="danger-button" onClick={removeAccount} disabled={busy}><Trash2 size={16}/>{busy?'Working…':'Delete my Angaan data'}</button>
+      </section>}
   </>;
 }
 

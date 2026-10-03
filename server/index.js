@@ -10,7 +10,7 @@ import { createApiRouter } from './api.js';
 import { ApiError } from './api-helpers.js';
 import { migrate } from './db.js';
 import { requireSameOrigin } from './security.js';
-import { appointInitialAdmin } from './bootstrap-admin.js';
+import { appointInitialAdmin, appointInitialSuperAdmin } from './bootstrap-admin.js';
 
 const production = process.env.NODE_ENV === 'production';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -26,7 +26,12 @@ const pool = new pg.Pool({
 pool.on('error', () => console.error(JSON.stringify({ event: 'database_pool_error' })));
 await migrate(pool);
 const appointment = await appointInitialAdmin(pool, process.env.SOCIETY_INITIAL_ADMIN_USER_ID);
-console.log(JSON.stringify({ event: 'initial_admin_setup', status: appointment.status }));
+const superAppointment = await appointInitialSuperAdmin(pool, process.env.SOCIETY_INITIAL_SUPER_ADMIN_USER_ID);
+console.log(JSON.stringify({
+  event: 'initial_admin_setup',
+  adminStatus: appointment.status,
+  superAdminStatus: superAppointment.status,
+}));
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);

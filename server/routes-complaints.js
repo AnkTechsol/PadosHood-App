@@ -1,11 +1,11 @@
 import { ApiError, audit, pagination, parse, schemas, transaction } from './api-helpers.js';
-import { checkUuid, requireMember, rowOr404 } from './api-access.js';
+import { checkUuid, isAdminRole, requireMember, rowOr404 } from './api-access.js';
 
 export function registerComplaintRoutes(router, { pool }) {
   router.get('/complaints', async (req, res) => {
     const member = await requireMember(pool, req);
     const { limit, offset } = pagination(req);
-    const isAdmin = member.role === 'Admin';
+    const isAdmin = isAdminRole(member.role);
     const result = await pool.query(
       `SELECT c.*, m.name AS resident_name FROM ang_complaints c
        JOIN ang_members m ON m.id = c.member_id
@@ -55,7 +55,7 @@ export function registerComplaintRoutes(router, { pool }) {
   router.patch('/complaints/:id', async (req, res) => {
     const member = await requireMember(pool, req);
     checkUuid(req.params.id);
-    if (member.role === 'Admin') {
+    if (isAdminRole(member.role)) {
       const body = parse(schemas.complaintAdmin, req.body);
       const complaint = await transaction(pool, async (client) => {
         const found = await client.query('SELECT * FROM ang_complaints WHERE id = $1 FOR UPDATE', [req.params.id]);

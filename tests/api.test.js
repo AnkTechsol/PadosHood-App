@@ -5,7 +5,9 @@ import pg from 'pg';
 import request from 'supertest';
 import { createApiApp } from '../server/api.js';
 import { migrate } from '../server/db.js';
-import { appointInitialAdmin } from '../server/bootstrap-admin.js';
+import {
+  appointInitialAdmin, appointInitialSuperAdmin, transferSuperAdmin,
+} from '../server/bootstrap-admin.js';
 
 const { Pool } = pg;
 const dbUrl = process.env.DATABASE_URL;
@@ -53,10 +55,13 @@ test('society API authorization, CRUD, persistence, pagination and protected del
   await migrate(pool);
   const suffix = randomUUID();
   const ids = Object.fromEntries([
-    'resident', 'other', 'admin', 'admin2', 'lastAdmin', 'pending', 'joiner',
-    'reapply', 'suspended', 'pendingDelete', 'rateLimit',
+    'resident', 'other', 'admin', 'admin2', 'lastAdmin', 'superAdmin',
+    'superAdminReplacement', 'pending', 'joiner', 'reapply', 'suspended',
+    'pendingDelete', 'rateLimit',
   ]
     .map((key) => [key, `test_${key}_${suffix}`]));
+  ids.superAdmin = `user_${randomUUID().replaceAll('-', '')}`;
+  ids.superAdminReplacement = `user_${randomUUID().replaceAll('-', '')}`;
   const app = createApiApp({
     pool,
     identity: (req) => req.get('x-test-clerk-user'),
@@ -82,7 +87,7 @@ test('society API authorization, CRUD, persistence, pagination and protected del
   residentId = await addMember('resident', 'Resident', 'Approved');
   otherId = await addMember('other', 'Resident', 'Approved');
   await addMember('admin', 'Admin', 'Approved');
-  await addMember('admin2', 'Resident', 'Approved');
+  const demoAdminId = await addMember('admin2', 'Resident', 'Approved');
   lastAdminId = await addMember('lastAdmin', 'Admin', 'Approved');
   await addMember('pending', 'Resident', 'Pending');
   await addMember('suspended', 'Resident', 'Suspended');
@@ -102,6 +107,35 @@ test('society API authorization, CRUD, persistence, pagination and protected del
   assert.equal((await pool.query('SELECT status FROM ang_members WHERE user_id=$1', [bootstrapUser])).rows[0].status, 'Suspended');
   await pool.query('DELETE FROM ang_members WHERE user_id=$1', [bootstrapUser]);
 
+  assert.deepEqual(await appointInitialSuperAdmin(pool, undefined), { status: 'not_configured' });
+  await assert.rejects(appointInitialSuperAdmin(pool, 'invalid-account-reference'));
+  const bootstrapSuperAdmin = `user_${randomUUID().replaceAll('-', '')}`;
+  assert.deepEqual(await appointInitialSuperAdmin(pool, bootstrapSuperAdmin), { status: 'awaiting_membership' });
+  await pool.query(
+    "INSERT INTO ang_members (user_id, name, block, flat, resident_type) VALUES ($1, 'Fixture Bootstrap Super Admin', 'T1', '901', 'Owner')",
+    [bootstrapSuperAdmin],
+  );
+  assert.deepEqual(await appointInitialSuperAdmin(pool, bootstrapSuperAdmin), { status: 'appointed' });
+  assert.deepEqual(await appointInitialSuperAdmin(pool, bootstrapSuperAdmin), { status: 'already_completed' });
+  const competingSuperAdmin = `user_${randomUUID().replaceAll('-', '')}`;
+  await pool.query(
+    "INSERT INTO ang_members (user_id, name, block, flat, resident_type) VALUES ($1, 'Fixture Competing Super Admin', 'T1', '902', 'Owner')",
+    [competingSuperAdmin],
+  );
+  assert.deepEqual(await appointInitialSuperAdmin(pool, competingSuperAdmin), { status: 'super_admin_already_assigned' });
+  assert.equal((await pool.query('SELECT role FROM ang_members WHERE user_id=$1', [competingSuperAdmin])).rows[0].role, 'Resident');
+  await pool.query('DELETE FROM ang_members WHERE user_id = ANY($1::text[])', [[bootstrapSuperAdmin, competingSuperAdmin]]);
+
+  const superAdminId = await addMember('superAdmin', 'SuperAdmin', 'Approved');
+  const superAdminReplacementId = await addMember('superAdminReplacement', 'Resident', 'Approved');
+  await assert.rejects(
+    pool.query(
+      "INSERT INTO ang_members (user_id, name, block, flat, resident_type, role, status) VALUES ($1, 'Fixture Duplicate Super Admin', 'T1', '903', 'Owner', 'SuperAdmin', 'Approved')",
+      [`test_duplicate_super_admin_${suffix}`],
+    ),
+    error => error.code === '23505' && error.constraint === 'ang_members_single_super_admin_idx',
+  );
+
   assert.equal((await request(app).get('/api/me')).status, 401);
   assert.deepEqual((await request(app).get('/api/health')).body, { ok: true });
   assert.equal((await as(ids.pending).get('/api/notices')).status, 403);
@@ -115,6 +149,10 @@ test('society API authorization, CRUD, persistence, pagination and protected del
     name: 'Fixture Joiner', block: 'T1', flat: '202', residentType: 'Tenant', role: 'Admin',
   });
   assert.equal(forged.status, 400);
+  const forgedSuperAdmin = await as(ids.joiner).post('/api/membership').send({
+    name: 'Fixture Joiner', block: 'T1', flat: '202', residentType: 'Tenant', role: 'SuperAdmin',
+  });
+  assert.equal(forgedSuperAdmin.status, 400);
   const joining = await as(ids.joiner).post('/api/membership').send({
     name: 'Fixture Joiner', block: 'T1', flat: '202', residentType: 'Tenant',
   });
@@ -141,6 +179,25 @@ test('society API authorization, CRUD, persistence, pagination and protected del
   assert.equal(memberPage.body.hasMore, true);
   assert.equal((await as(ids.resident).get('/api/members')).status, 403);
   assert.equal((await as(ids.admin).patch(`/api/members/${joining.body.id}`).send({ status: 'Approved' })).status, 200);
+  assert.equal((await as(ids.admin).patch(`/api/members/${demoAdminId}`).send({ role: 'Admin' })).status, 403);
+  assert.equal((await as(ids.admin).patch(`/api/members/${lastAdminId}`).send({ status: 'Suspended' })).status, 403);
+  assert.equal((await as(ids.admin).patch(`/api/members/${superAdminId}`).send({ status: 'Suspended' })).status, 409);
+  assert.equal((await as(ids.superAdmin).get('/api/members')).status, 200);
+  assert.equal((await as(ids.superAdmin).patch(`/api/members/${superAdminId}`).send({ status: 'Suspended' })).status, 409);
+  assert.equal((await as(ids.superAdmin).patch(`/api/members/${joining.body.id}`).send({ role: 'SuperAdmin' })).status, 400);
+  const appointedDemoAdmin = await as(ids.superAdmin).patch(`/api/members/${demoAdminId}`).send({ role: 'Admin' });
+  assert.equal(appointedDemoAdmin.status, 200);
+  assert.equal(appointedDemoAdmin.body.role, 'Admin');
+  assert.equal(appointedDemoAdmin.body.status, 'Approved');
+  assert.equal((await as(ids.admin).patch(`/api/members/${demoAdminId}`).send({ status: 'Suspended' })).status, 403);
+  const suspendedDemoAdmin = await as(ids.superAdmin).patch(`/api/members/${demoAdminId}`).send({ status: 'Suspended' });
+  assert.equal(suspendedDemoAdmin.status, 200);
+  assert.equal(suspendedDemoAdmin.body.role, 'Admin');
+  assert.equal(suspendedDemoAdmin.body.status, 'Suspended');
+  assert.equal((await as(ids.superAdmin).patch(`/api/members/${demoAdminId}`).send({ status: 'Approved' })).status, 200);
+  const removedDemoAdmin = await as(ids.superAdmin).patch(`/api/members/${demoAdminId}`).send({ role: 'Resident' });
+  assert.equal(removedDemoAdmin.status, 200);
+  assert.equal(removedDemoAdmin.body.role, 'Resident');
   assert.equal((await as(ids.admin).patch('/api/members/not-a-uuid').send({ status: 'Approved' })).status, 400);
   assert.equal((await as(ids.admin).patch(`/api/members/${residentId}`).send({ role: 'Admin', status: 'Approved', unexpected: true })).status, 400);
   assert.equal((await as(ids.admin).patch('/api/members/00000000-0000-4000-8000-000000000000').send({ status: 'Approved' })).status, 404);
@@ -228,6 +285,10 @@ test('society API authorization, CRUD, persistence, pagination and protected del
     assert.equal((await as(ids.resident).delete(`/api/complaints/${complaint.body.id}`)).status, 403);
     assert.equal((await as(ids.resident).get('/api/complaints')).body.items.length, 1);
     assert.equal((await as(ids.admin).get('/api/complaints')).body.items.length, 1);
+  assert.equal((await as(ids.superAdmin).get('/api/complaints')).body.items.length, 1);
+  assert.equal((await as(ids.superAdmin).patch(`/api/complaints/${complaint.body.id}`).send({
+    status: 'Resolved', note: 'Fixture super admin update',
+  })).status, 200);
     assert.equal((await as(ids.admin).patch('/api/complaints/00000000-0000-4000-8000-000000000000').send({
       status: 'Closed',
     })).status, 404);
@@ -254,8 +315,9 @@ test('society API authorization, CRUD, persistence, pagination and protected del
     assert.equal(exportResponse.body.posts.length, 0);
     await pool.query("UPDATE ang_members SET role = 'Resident' WHERE user_id = $1", [ids.admin]);
     const lastRole = await as(ids.lastAdmin).patch(`/api/members/${lastAdminId}`).send({ role: 'Resident' });
-    assert.equal(lastRole.status, 409);
-    assert.equal((await as(ids.lastAdmin).delete('/api/account')).status, 409);
+    assert.equal(lastRole.status, 403);
+    assert.equal((await as(ids.lastAdmin).delete('/api/account')).status, 204);
+    assert.equal((await as(ids.superAdmin).delete('/api/account')).status, 409);
     assert.equal((await as(ids.other).delete('/api/account')).status, 204);
     assert.equal((await pool.query('SELECT id FROM ang_posts WHERE id = $1', [ownPost.body.id])).rowCount, 0);
     assert.equal((await pool.query('SELECT id FROM ang_members WHERE id = $1', [otherId])).rowCount, 0);
@@ -272,9 +334,23 @@ test('society API authorization, CRUD, persistence, pagination and protected del
   assert.equal((await pool.query('SELECT id FROM ang_members WHERE user_id = $1', [ids.pendingDelete])).rowCount, 0);
 
   const audits = await pool.query(
-    "SELECT action FROM ang_audit WHERE actor_user_id = ANY($1::text[]) AND action LIKE 'notice.%'",
-    [[ids.admin]],
+    "SELECT action FROM ang_audit WHERE (actor_user_id = $1 AND action LIKE 'notice.%') OR (actor_user_id = $2 AND action = 'member.role_updated')",
+    [ids.admin, ids.superAdmin],
   );
   assert.ok(audits.rows.some((row) => row.action === 'notice.created'));
   assert.ok(audits.rows.some((row) => row.action === 'notice.updated'));
+  assert.ok(audits.rows.some((row) => row.action === 'member.role_updated'));
+
+  assert.deepEqual(
+    await transferSuperAdmin(pool, ids.superAdmin, ids.superAdminReplacement),
+    { status: 'transferred' },
+  );
+  const activeSuperAdmin = await pool.query("SELECT user_id FROM ang_members WHERE role = 'SuperAdmin'");
+  assert.deepEqual(activeSuperAdmin.rows, [{ user_id: ids.superAdminReplacement }]);
+  const previousSuperAdmin = await pool.query('SELECT role, status FROM ang_members WHERE id = $1', [superAdminId]);
+  assert.deepEqual(previousSuperAdmin.rows[0], { role: 'Resident', status: 'Suspended' });
+  assert.equal((await pool.query('SELECT role, status FROM ang_members WHERE id = $1', [superAdminReplacementId])).rows[0].role, 'SuperAdmin');
+  assert.equal((await as(ids.superAdmin).get('/api/members')).status, 403);
+  assert.equal((await as(ids.superAdminReplacement).get('/api/members')).status, 200);
+  await assert.rejects(transferSuperAdmin(pool, ids.superAdminReplacement, 'invalid-account-reference'));
 });

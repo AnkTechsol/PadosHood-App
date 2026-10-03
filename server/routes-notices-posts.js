@@ -1,5 +1,5 @@
 import { ApiError, audit, noticeJson, pagination, parse, postJson, schemas, transaction } from './api-helpers.js';
-import { checkUuid, requireAdmin, requireMember, rowOr404 } from './api-access.js';
+import { checkUuid, isAdminRole, requireAdmin, requireMember, rowOr404 } from './api-access.js';
 
 export function registerNoticePostRoutes(router, { pool }) {
   router.get('/notices', async (req, res) => {
@@ -100,7 +100,7 @@ export function registerNoticePostRoutes(router, { pool }) {
     await transaction(pool, async (client) => {
       const result = await client.query('SELECT * FROM ang_posts WHERE id = $1 FOR UPDATE', [req.params.id]);
       const post = rowOr404(result, 'Post not found');
-      if (post.member_id !== member.id && member.role !== 'Admin') {
+      if (post.member_id !== member.id && !isAdminRole(member.role)) {
         throw new ApiError(403, 'Only the post author or an administrator may delete this post');
       }
       if (post.member_id !== member.id) {

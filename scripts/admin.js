@@ -15,10 +15,13 @@ if (!process.env.DATABASE_URL || !userId) {
     transactionStarted = true;
     await client.query("SELECT pg_advisory_xact_lock(hashtext('ang_membership_admin_lock'))");
     const member = await client.query(
-      'SELECT id FROM ang_members WHERE user_id = $1 FOR UPDATE',
+      'SELECT id, role FROM ang_members WHERE user_id = $1 FOR UPDATE',
       [userId],
     );
     if (!member.rowCount) throw new Error('User must have an existing membership');
+    if (member.rows[0].role === 'SuperAdmin') {
+      throw new Error('The ordinary administrator command cannot change the Super Admin account');
+    }
     await client.query("UPDATE ang_members SET role = 'Admin', status = 'Approved' WHERE id = $1", [member.rows[0].id]);
     await client.query(
       "INSERT INTO ang_audit (actor_user_id, action, target_type, target_id) VALUES ($1, 'admin.promoted', 'member', $2)",

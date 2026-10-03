@@ -22,7 +22,7 @@ This is an engineering-selected minimum launch scope, not a statement that the c
 
 ## Roles and trust
 
-Clerk proves identity. PostgreSQL holds membership and permissions. Joining never creates an administrator. An operator appoints the initial administrator by exact Clerk account ID after verifying the person and their joining request: use the controlled CLI for the intended database, or the one-time `SOCIETY_INITIAL_ADMIN_USER_ID` startup configuration in the intended environment. Do not appoint an unknown resident. Development and production accounts are separate; see the runbook for production appointment.
+Clerk proves identity. PostgreSQL holds membership and permissions. Joining never creates an administrator. The owner is designated Super Admin by exact Clerk account ID only after verifying their identity and joining request, using the one-time `SOCIETY_INITIAL_SUPER_ADMIN_USER_ID` startup configuration in the intended environment. The Super Admin then appoints and suspends ordinary Admin accounts from Members. Do not appoint an unknown resident or share production passwords. Development and production accounts are separate; see the runbook for production appointment and recovery.
 
 ## Acceptance criteria
 

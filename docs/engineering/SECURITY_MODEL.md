@@ -16,8 +16,10 @@ Unauthenticated internet users, authenticated pending/rejected/suspended residen
 
 - Clerk-verified identity and PostgreSQL-backed server authorization; never accept role or identity from browser.
 - Route-level membership/owner/admin checks, validation/strict schemas, parameterized SQL, UUID validation, JSON size cap, same-origin JSON mutation checks, rate-limited writes, safe API error messages, audit events for admin mutations.
-- Complaint list scoping to resident's own rows; administrator listing only for approved admin; account export is self-only; last approved administrator cannot be removed.
-- Initial-admin bootstrap requires the operator-configured exact Clerk user ID of an existing member; it uses a transaction/advisory lock and one-time audit event rather than granting privileges to the first registrant. Bootstrap behavior is covered by the reported exact-ID/one-time tests, but this is not a completed security review or production verification.
+- Complaint list scoping to resident's own rows; administrator listing only for approved Admin or Super Admin; account export is self-only; the Super Admin cannot be suspended or deleted through member/API actions.
+- Super Admin bootstrap requires the operator-configured exact Clerk user ID of an existing member; a PostgreSQL unique partial index enforces one account, and bootstrap uses a transaction/advisory lock and one-time audit event rather than granting privileges to the first registrant.
+- Only Super Admin can promote, demote, suspend, or resume Admin accounts. Ordinary Admin role changes are rejected by the API, not merely hidden in the browser; role changes and recovery transfers are audited.
+- Recovery of a lost Super Admin is an explicit operator procedure: verify the replacement identity and approved membership, transfer to that exact account using the recovery CLI, suspend the previous account, and preserve the recovery audit events.
 - `ang_*` data schema separate from legacy civic/Supabase demo data; no upload flow.
 
 These controls are visible in route modules but remain subject to integration/security testing; they are not a completed security review. Rate limiting does not replace abuse monitoring. No security certification is claimed.

@@ -39,20 +39,35 @@ export function registerMemberRoutes(router, { pool }) {
     const updated = await transaction(pool, async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext('ang_membership_admin_lock'))");
       const requesterResult = await client.query(
-        "SELECT * FROM ang_members WHERE user_id = $1 AND role = 'Admin' AND status = 'Approved' FOR UPDATE",
+        "SELECT * FROM ang_members WHERE user_id = $1 AND role IN ('Admin', 'SuperAdmin') AND status = 'Approved' FOR UPDATE",
         [req.apiUserId],
       );
       if (!requesterResult.rowCount) throw new ApiError(403, 'Administrator permission required');
       const requester = requesterResult.rows[0];
       const targetResult = await client.query('SELECT * FROM ang_members WHERE id = $1 FOR UPDATE', [req.params.id]);
       const target = rowOr404(targetResult, 'Member not found');
+      if (target.role === 'SuperAdmin') {
+        throw new ApiError(409, 'The Super Admin account is protected from member management');
+      }
+      if (body.role !== undefined && requester.role !== 'SuperAdmin') {
+        throw new ApiError(403, 'Only the Super Admin can appoint or remove administrators');
+      }
+      if (target.role === 'Admin' && requester.role !== 'SuperAdmin'
+        && (body.role !== undefined || body.status !== undefined)) {
+        throw new ApiError(403, 'Only the Super Admin can change an administrator account');
+      }
       if (target.id === requester.id && body.status === 'Approved' && target.status !== 'Approved') {
         throw new ApiError(403, 'Administrators cannot approve their own membership');
       }
       const nextRole = body.role ?? target.role;
       const nextStatus = body.status ?? target.status;
+      if (body.role === 'Admin' && nextStatus !== 'Approved') {
+        throw new ApiError(409, 'Administrator access requires approved society membership');
+      }
       if (target.role === 'Admin' && target.status === 'Approved' && (nextRole !== 'Admin' || nextStatus !== 'Approved')) {
-        const count = await client.query("SELECT count(*)::int AS count FROM ang_members WHERE role = 'Admin' AND status = 'Approved'");
+        const count = await client.query(
+          "SELECT count(*)::int AS count FROM ang_members WHERE role IN ('Admin', 'SuperAdmin') AND status = 'Approved'",
+        );
         if (count.rows[0].count <= 1) throw new ApiError(409, 'Cannot remove or suspend the last approved administrator');
       }
       const result = await client.query(
@@ -60,7 +75,13 @@ export function registerMemberRoutes(router, { pool }) {
         [nextRole, nextStatus, target.id],
       );
       if (body.role !== undefined || body.status !== undefined) {
-        await audit(client, req.apiUserId, 'member.updated', 'member', target.id);
+        await audit(
+          client,
+          req.apiUserId,
+          body.role !== undefined ? 'member.role_updated' : 'member.updated',
+          'member',
+          target.id,
+        );
       }
       return result.rows[0];
     });

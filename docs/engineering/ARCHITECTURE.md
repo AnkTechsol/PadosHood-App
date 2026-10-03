@@ -16,7 +16,7 @@
 4. Approved members read notices and create posts/complaints. Complaint lists are owner-scoped for residents and society-wide for approved administrators.
 5. Administrative writes and account deletion are audited by actor/action/target metadata; the audit table intentionally omits submitted message bodies.
 6. Account export returns the requesting member's application data. Application-account deletion removes membership, own complaints/events, and own posts; it does not remove the Clerk identity. Notice records are not user-owned deletion data.
-7. Initial administrator appointment is an operator-controlled startup path, not a public API: `SOCIETY_INITIAL_ADMIN_USER_ID` must exactly identify an existing, out-of-band-verified joining member. A transaction/advisory lock and one-time audit event prevent repeat appointment; no first-user-wins behavior exists. See the [operator runbook](RUNBOOK.md).
+7. The single Super Admin appointment is an operator-controlled startup path, not a public API: `SOCIETY_INITIAL_SUPER_ADMIN_USER_ID` must exactly identify an existing, out-of-band-verified joining member. PostgreSQL enforces the single-role invariant; transactions/advisory locks and one-time audit events prevent repeat appointment. Only the Super Admin can manage Admin roles; see the [operator runbook](RUNBOOK.md).
 
 Data collected for this scope is the resident's name, block/tower, flat, Owner/Tenant choice, Clerk user ID, and submitted text (notices, posts, complaints, timeline notes). No file uploads, contact fields, health details, payment data, or AI prompt flow are in the launch design. See [data inventory](DATA_INVENTORY.md), [retention decisions](DATA_RETENTION_SCHEDULE.md), and [subprocessors](SUBPROCESSORS.md).
 

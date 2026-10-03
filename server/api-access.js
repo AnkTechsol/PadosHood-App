@@ -15,8 +15,12 @@ export async function requireMember(pool, req, { approved = true } = {}) {
 
 export async function requireAdmin(pool, req) {
   const member = await requireMember(pool, req);
-  if (member.role !== 'Admin') throw new ApiError(403, 'Administrator permission required');
+  if (!isAdminRole(member.role)) throw new ApiError(403, 'Administrator permission required');
   return member;
+}
+
+export function isAdminRole(role) {
+  return role === 'Admin' || role === 'SuperAdmin';
 }
 
 export function hasUuid(value) {

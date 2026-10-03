@@ -51,8 +51,13 @@ export function registerAccountRoutes(router, { pool }) {
       const found = await client.query('SELECT * FROM ang_members WHERE user_id = $1 FOR UPDATE', [req.apiUserId]);
       if (!found.rowCount) return;
       const member = found.rows[0];
+      if (member.role === 'SuperAdmin') {
+        throw new ApiError(409, 'The Super Admin account cannot be deleted through this portal');
+      }
       if (member.role === 'Admin' && member.status === 'Approved') {
-        const count = await client.query("SELECT count(*)::int AS count FROM ang_members WHERE role = 'Admin' AND status = 'Approved'");
+        const count = await client.query(
+          "SELECT count(*)::int AS count FROM ang_members WHERE role IN ('Admin', 'SuperAdmin') AND status = 'Approved'",
+        );
         if (count.rows[0].count <= 1) throw new ApiError(409, 'Cannot delete the last approved administrator');
       }
       if (member.role === 'Admin') await audit(client, req.apiUserId, 'account.deleted', 'member', member.id);
